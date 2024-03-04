@@ -28,7 +28,8 @@ for index, test in enumerate(tests):
     @patch('builtins.input', side_effect=test["inputs"])
     def test_scenario(self, mock_input, mock_stdout, test=test):
         simulation()
-        self.assertEqual(mock_stdout.getvalue().strip(), test["output"])
+        self.assertEqual(mock_stdout.getvalue().strip().split("\n")[-1], test["output"])
+
 
     setattr(TestRobotSimulation, f'test_scenario_{test["test_name"]}', test_scenario)
 

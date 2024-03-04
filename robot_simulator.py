@@ -13,8 +13,6 @@ class Command(Enum):
     RIGHT = "RIGHT"
     REPORT = "REPORT"
 
-#NÄMN ATT PYTHON TILLÅTER ÄNDRING AV VARIABLER OM JAG EJ ANVÄNDER BIBLOTEK SOM attrs
-
 TABLE_BOUNDS_X = (0,5)
 TABLE_BOUNDS_Y = (0,5)
 
@@ -48,83 +46,85 @@ def within_bounds(x,y):
     else:
         return False
 
-def place(x,y,f):
+def place(state, commands_list):
+    if len(commands_list) < 3:
+        print("PLACE needs three agruments E.g. PLACE,1,2,EAST ")
+        return state                        
     try:
-        x = int(x)
-        y = int(y)
-        valid_direction = any(f == direction.value for direction in Direction)
-        if within_bounds(x,y) and valid_direction:
-            return x,y,Direction(f),True
+        input_x = int(commands_list.pop(0))
+        input_y = int(commands_list.pop(0))
+        input_f = commands_list.pop(0)
+
+        valid_direction = any(input_f == direction.value for direction in Direction)
+        if within_bounds(input_x,input_y) and valid_direction:
+            state= {"x":input_x,
+            "y":input_y,
+            "f": Direction(input_f),
+            "placed": True}
+            return state
         else: 
-            print("placement out of range or non excisitng direction")
-            return None,None,None,False
+            print("Placement out of range or non excisitng direction")
+            return state
     except ValueError:
-        print("Invalid form. EX PLACE,1,2,EAST ")
-        return None,None,None,False
+        print("Invalid form. E.g. PLACE,1,2,EAST ")
+        return state
       
-def move(x, y, f):
+def move(state):
+    x = state["x"]
+    y = state["y"]
+    f = state["f"]
     if f not in MOVE_DIRECTIONS:
         print("Invalid direction:", f)
-        return x, y
+        return state
     
     delta_x, delta_y = MOVE_DIRECTIONS[f]
     new_x = x + delta_x
     new_y = y + delta_y
     
     if within_bounds(new_x,new_y):
-        return new_x, new_y
+        state["x"] = new_x
+        state["y"] = new_y
+        return state
     else:
-        return x,y
+        return state
 
-def rotate(f, turn):
+def rotate(state, turn):
+    f = state["f"]
     if Command(turn) not in MOVE_MAP:
         print("Invalid command:", turn)
-        return f
-    return MOVE_MAP[Command(turn)][f]
+        return state
+    state["f"] = MOVE_MAP[Command(turn)][f]
+    return state
 
 def simulation(): 
-    placed = False 
     exit_simulation = False
+    state = {
+        "x":None,
+        "y":None,
+        "f": None,
+        "placed": False
+    }
+
     while not exit_simulation:
         commands_list = input("input command:").split(',') 
-        if Command.PLACE.value not in commands_list and not placed:
-            print("Robot must be placed on table")
+        if Command.PLACE.value not in commands_list and not state["placed"]:
+            print("Robot must first be placed on table")
         else:
             while len(commands_list) != 0:
                 command = commands_list.pop(0)
-                if not placed:
-                    if command == Command.PLACE.value:
-                        if len(commands_list) >= 3:
-                            input_x = commands_list.pop(0)
-                            input_y = commands_list.pop(0)
-                            input_f = commands_list.pop(0)
-                            x,y,f,valid_place = place(input_x,input_y,input_f)
-                            if valid_place:
-                                placed = True
-                    else: 
-                        continue
-                elif placed:
-                    if command == Command.MOVE.value:
-                        x,y = move(x,y,f)
-                    elif command in [Command.LEFT.value, Command.RIGHT.value]:
-                        f = rotate(f, command)
-                    elif command == Command.REPORT.value:
-                        print(f"{x},{y},{f.value}")
-                        if __name__ != '__main__':
-                            exit_simulation = True
-                            break
-                    elif command == Command.PLACE.value:
-                        if len(commands_list) >= 3:
-                            input_x = commands_list.pop(0)
-                            input_y = commands_list.pop(0)
-                            input_f = commands_list.pop(0)
-                            new_x,new_y,new_f,valid_place = place(input_x,input_y,input_f)
-                            if valid_place:
-                                x = new_x
-                                y = new_y
-                                f = new_f
-                        else: 
-                            print("Invalid place command,EX PLACE,0,0,NORTH")
+                if command == Command.PLACE.value:
+                    state = place(state, commands_list)
+                elif not state["placed"]:
+                    continue
+                elif command == Command.MOVE.value:
+                    state = move(state)
+                elif command in [Command.LEFT.value, Command.RIGHT.value]:
+                    state = rotate(state, command)
+                elif command == Command.REPORT.value:
+                    print(f'{state["x"]},{state["y"]},{state["f"].value}')
+                    if __name__ != '__main__':
+                        exit_simulation = True
+                        break
 
 def main():
     print("Welcome to the Robot Simulator!")
